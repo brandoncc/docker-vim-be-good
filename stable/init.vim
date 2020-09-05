@@ -1,5 +1,5 @@
 call plug#begin(stdpath('data') . '/plugged')
-Plug '/usr/src/vim-be-good'
+Plug 'ThePrimeagen/vim-be-good'
 Plug 'gruvbox-community/gruvbox'
 call plug#end()
 
