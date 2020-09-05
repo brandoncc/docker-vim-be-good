@@ -10,5 +10,4 @@ RUN nvim -u docker/init.vim +'PlugInstall --sync' +qa
 CMD cd vim-be-good && \
   echo "Updating vim-be-good..." && \
   git pull || true && \
-  cd .. && \
-  nvim -u docker/init.vim -c 'call VimBeGood()'
+  nvim -u /usr/src/docker/init.vim -c 'call VimBeGood()'
