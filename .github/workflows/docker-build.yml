@@ -43,8 +43,8 @@ jobs:
           PREVIOUS_LATEST_SHA=${{ secrets.PREVIOUS_LATEST_SHA }}
           
           [ "$PREVIOUS_LATEST_SHA" != "$LATEST_SHA" ] \
-          && docker build -t brandoncc/vim-be-good:stable stable \
-          && docker build -t brandoncc/vim-be-good:latest latest \
+          && docker build -t --no-cache brandoncc/vim-be-good:stable stable \
+          && docker build -t --no-cache brandoncc/vim-be-good:latest latest \
           && docker push brandoncc/vim-be-good:stable \
           && docker push brandoncc/vim-be-good:latest \
           && SUCCESS=true
