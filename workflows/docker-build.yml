@@ -1,0 +1,60 @@
+name: Docker
+
+on:
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: '0 */12 * * *'
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Get vim-be-good commit sha
+        run: |
+          # Get the "created_at" timestamp of the nightly release and replace
+          # : and - characters in it with underscores
+          LATEST_SHA=$(sed 's,[:-],_,g' <(\
+            curl \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/ThePrimeagen/vim-be-good/branches/master \
+            | grep sha \
+            | cut -d : -f 2,3 \
+            | tr -d \" \
+            | tr -d , \
+            | tr -d \  \
+            | head -n 1))
+
+          # story the value for future steps
+          echo "::set-output name=latest_sha::$LATEST_SHA"
+        id: get_latest_sha
+
+      - name: Log into GitHub Container Registry
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      - name: Build images, push if builds are successful
+        run: |
+          SUCCESS=false
+          LATEST_SHA=${{ steps.get_latest_sha.outputs.latest_sha  }}
+          PREVIOUS_LATEST_SHA=${{ secrets.PREVIOUS_LATEST_SHA }}
+          
+          [ "$PREVIOUS_LATEST_SHA" != "$LATEST_SHA" ] \
+          && docker build -t brandoncc/vim-be-good:stable stable \
+          && docker build -t brandoncc/vim-be-good:latest latest \
+          && docker push brandoncc/vim-be-good:stable \
+          && docker push brandoncc/vim-be-good:latest
+          && SUCCESS=true
+
+          [ "$SUCCESS" = "true" ] \
+            && sudo gem install rbnacl \
+            && ENCRYPTED_SECRET=$(ruby encrypt_latest_sha.rb "$LATEST_SHA" "${{ secrets.PUBLIC_KEY }}") \
+            && curl \
+              -X PUT \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H 'authorization: Bearer ${{ secrets.ACCESS_TOKEN }}' \
+              https://api.github.com/repos/${{ github.repository }}/actions/secrets/PREVIOUS_LATEST_SHA \
+              -d "{\"encrypted_value\":\"$ENCRYPTED_SECRET\", \"key_id\": \"${{ secrets.PUBLIC_KEY_ID }}\"}"
